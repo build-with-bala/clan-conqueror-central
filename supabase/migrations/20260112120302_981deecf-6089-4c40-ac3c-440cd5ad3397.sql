@@ -1,4 +1,4 @@
--- Function to recalculate all playoff points from medals
+-- Drop and recreate the function with proper WHERE clauses
 CREATE OR REPLACE FUNCTION public.recalculate_playoff_points()
 RETURNS void
 LANGUAGE plpgsql
@@ -6,19 +6,20 @@ SECURITY DEFINER
 SET search_path TO 'public'
 AS $$
 BEGIN
-  -- Reset all clan points and medals
+  -- Reset all clan points and medals (WHERE true to satisfy requirement)
   UPDATE clans 
   SET 
     total_points = 0,
     gold_medals = 0,
     silver_medals = 0,
-    bronze_medals = 0;
+    bronze_medals = 0
+  WHERE true;
 
   -- Recalculate gold medals and points from final winners
   UPDATE clans c
   SET 
     gold_medals = subquery.gold_count,
-    total_points = total_points + (subquery.gold_count * 25)
+    total_points = c.total_points + (subquery.gold_count * 25)
   FROM (
     SELECT winner, COUNT(*) as gold_count
     FROM matches
@@ -33,7 +34,7 @@ BEGIN
   UPDATE clans c
   SET 
     silver_medals = subquery.silver_count,
-    total_points = total_points + (subquery.silver_count * 15)
+    total_points = c.total_points + (subquery.silver_count * 15)
   FROM (
     SELECT 
       CASE WHEN winner = clan1 THEN clan2 ELSE clan1 END as loser,
@@ -50,7 +51,7 @@ BEGIN
   UPDATE clans c
   SET 
     bronze_medals = subquery.bronze_count,
-    total_points = total_points + (subquery.bronze_count * 10)
+    total_points = c.total_points + (subquery.bronze_count * 10)
   FROM (
     SELECT winner, COUNT(*) as bronze_count
     FROM matches
